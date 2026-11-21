@@ -1,102 +1,81 @@
 # DC Traffic Violations & Weather Analytics
 
-**Python | Pandas | MySQL | SQLAlchemy | ETL | SQL**
+**Python · Pandas · MySQL · SQLAlchemy · ETL · SQL**  
 
-## Project Overview
+## Project overview
 
-The objective was to build an automated ETL (Extract, Transform, Load) pipeline integrating Washington, DC traffic violation records with historical weather data to investigate traffic patterns, fine amounts, and the potential relationship between weather conditions and traffic violations.
+I developed a Python ETL pipeline that integrates Washington, DC moving-violation records with daily weather observations, loads the cleaned data into MySQL, and uses SQL to examine citation trends, speeding-related fines, and differences between rainy and non-rainy days.
 
-The project combines Python-based data processing, relational database design, and SQL analytics.
+**Project snapshot:** **2,475,473** unique violation records loaded in the original academic run. This is a historical result, **not** a live count.
 
-## Project Highlights
+## Key results from the original project
 
-- **2.47 Million Records:** Processed and loaded 2,475,473 unique traffic violation records into MySQL.
-- **Automated ETL Pipeline:** Developed Python workflows to retrieve, clean, and consolidate data from multiple sources.
-- **Database Development:** Designed relational tables and integrated datasets using MySQL and SQLAlchemy.
-- **SQL Analytics:** Analyzed traffic violations by time, issuing agency, fine amounts, and weather conditions.
-- **Incremental Data Collection:** Implemented automated data retrieval that skips previously downloaded files and supports continued data collection.
+| Metric | Reported result |
+|---|---:|
+| Unique traffic violation records processed | **2,475,473** |
+| Tickets issued since October 1, 2024 | **2,197,380** |
+| Tickets on days with recorded precipitation | **363,055** |
+| Accident-related tickets on rainy days | **506** |
+| Accident-related tickets on non-rainy days | **1,104** |
 
-*Record count reflects the original academic project results.*
+### Average citations by weekday
 
-## Data Sources
+![Average daily citations by weekday](assets/weekday-citations.png)
 
-| Source | Data | Description |
+The reported weekday query divides each weekday's ticket total by the number of distinct dates of that weekday in the violations table. Weekend averages were higher than Monday's in this historical snapshot.
+
+### Accident-related citations on rainy vs. non-rainy days
+
+![Accident-related citations by rainy vs. non-rainy dates](assets/accident-citations-by-weather.png)
+
+This comparison shows **raw counts**, not a risk or rate comparison: the number of observed rainy and non-rainy dates may differ. A “rainy day” means the matched daily weather record has precipitation above zero, **not necessarily that rain was falling when the ticket was issued**.
+
+## Data sources
+
+| Dataset | Provider | Access / coverage |
 |---|---|---|
-| DC Open Data | Moving Violations | Traffic citations, issuing agencies, violations, and fines |
-| Visual Crossing API | Historical Weather | Daily temperature and precipitation data |
+| Moving Violations Issued | [DC Open Data](https://opendata.dc.gov/) | Monthly DC citation files; historical snapshots used for coursework |
+| Daily weather | [Visual Crossing](https://www.visualcrossing.com/) | Daily temperature and precipitation; API key required |
 
-## ETL Workflow
+The underlying bulk CSV files are **not included**. DC Open Data and Visual Crossing have separate terms for data reuse and redistribution; consult those terms before republishing raw records. Links above point to the providers rather than claiming a permanent exact dataset download URL.
 
-The project follows five main stages:
+## ETL workflow
 
-1. **Extract:** Retrieve monthly traffic violation records from DC Open Data and daily weather information through the Visual Crossing API.
-2. **Transform:** Clean missing values, standardize date and numeric fields, and remove duplicate records.
-3. **Consolidate:** Combine monthly files into structured datasets for analysis.
-4. **Load:** Transfer cleaned records into MySQL using Python, pandas, and SQLAlchemy.
-5. **Analyze:** Execute SQL queries to investigate traffic patterns and relationships with weather conditions.
+`DC Open Data + Visual Crossing API → Python / Pandas → CSV staging → MySQL → SQL queries`
 
-### Data Pipeline
+1. **Extract:** Fetch monthly citation CSV files and daily weather observations. Previously downloaded citation-month files are skipped; the weather downloader resumes from the last saved day.
+2. **Transform:** Consolidate monthly files, remove duplicate `OBJECTID` records, and standardize date and numeric fields.
+3. **Load:** Populate MySQL `violations` and `weather_daily` tables using pandas and SQLAlchemy.
+4. **Analyze:** Use SQL to examine issuing agencies, weekday and hourly patterns, speeding-related fines, and precipitation-linked citation counts.
 
-`DC Open Data + Visual Crossing API → Python & Pandas → MySQL → SQL Analysis`
+## Database design
 
-## Database Design
+![MySQL database ERD](assets/database-erd.png)
 
-The database contains two main tables:
+The tables are analytically joined using `DATE(violations.ISSUE_DATE) = weather_daily.weather_date` when weather context is needed.
 
-- **weather_daily:** Historical daily weather observations, including minimum temperature, maximum temperature, and precipitation.
-- **violations:** Traffic violation records, including citation dates, issuing agencies, violation codes, fines, and geographic information.
+## Repository contents
 
-The datasets are connected analytically through their corresponding dates.
-
-### Entity Relationship Diagram
-
-![Database ERD](assets/database-erd.png)
-
-## SQL Analysis
-
-The project includes SQL queries addressing questions such as:
-
-- Which agencies issued traffic citations each month?
-- How does ticket volume vary across weekdays and hours?
-- How many citations were issued on rainy days?
-- What were the monthly totals of speeding-related fines?
-- How do accident-related citations differ between rainy and non-rainy days?
-
-## Technologies Used
-
-| Technology | Application |
+| File | Purpose |
 |---|---|
-| Python | Data extraction, transformation, and automation |
-| Pandas | Data cleaning, consolidation, and processing |
-| MySQL | Database design, storage, and querying |
-| SQLAlchemy | Python-to-MySQL integration |
-| SQL | Data analysis and reporting |
-| Jupyter Notebook | ETL development and documentation |
-
-## Repository Structure
-
-| File | Description |
-|---|---|
-| `Project2_ETL.ipynb` | Python ETL notebook |
-| `Project2_ETL.py` | Python ETL script |
-| `01_Create_Tables_HuynhNhatQuynh.sql` | MySQL database schema |
-| `02_Analysis_Queries_HuynhNhatQuynh.sql` | SQL analysis queries |
-| `assets/database-erd.png` | Database relationship diagram |
+| `Project2_ETL.ipynb` | Original ETL workflow adapted to use environment variables; saved outputs removed |
+| `Project2_ETL.py` | Python script version of the adapted notebook |
+| `01_Create_Tables_HuynhNhatQuynh.sql` | MySQL schema and tables |
+| `02_Analysis_Queries_HuynhNhatQuynh.sql` | Eight analysis queries plus verification queries |
+| `assets/` | Database ERD and historical-result visualizations |
 | `requirements.txt` | Python dependencies |
-| `.env.example` | Example configuration for local execution |
+| `.env.example` | Example names of required environment variables (no credentials) |
 
-## How to Run
+## Run locally
 
-1. Install Python, MySQL, and the required dependencies using `pip install -r requirements.txt`.
-2. Configure the environment variables described in `.env.example`.
-3. Execute `01_Create_Tables_HuynhNhatQuynh.sql` to create the database tables.
-4. Run the Python ETL notebook or script to collect, process, and load the data.
-5. Execute `02_Analysis_Queries_HuynhNhatQuynh.sql` to explore the results.
+1. Install Python and MySQL, then run `pip install -r requirements.txt`.
+2. Set `VISUAL_CROSSING_API_KEY`, `MYSQL_USER`, `MYSQL_PASSWORD`, and `MYSQL_HOST` in your local environment using `.env.example` as a reference. Never commit credentials.
+3. Run `01_Create_Tables_HuynhNhatQuynh.sql` in a **disposable MySQL database**.
+4. Run the notebook sections in order: Weather ETL → Moving Violations ETL → Load into MySQL.
+5. Run `02_Analysis_Queries_HuynhNhatQuynh.sql` to reproduce the SQL analysis on the data you have collected.
 
-**Note:** Run the project in a dedicated test database because the setup and loading scripts replace existing table contents. External data sources may change or impose API limits.
+**Reproducibility note:** The public code has not been fully rerun against current upstream data. API rate limits, unavailable monthly source files, and source-schema changes can affect reproducibility. The schema script drops tables and the load process truncates tables, so **do not run against an existing database containing valuable data**.
 
-## Data Availability & Security
+## Portfolio and security note
 
-The project uses DC Open Data and historical weather information obtained through the Visual Crossing API.
-
-Raw datasets are not included in this repository. The code has been adapted for public sharing by replacing embedded credentials with environment variables. The original analytical workflow and SQL queries are retained.
+Embedded API/database credentials from the submitted code were replaced with environment-variable references, and private credentials, raw CSV files, and saved notebook outputs are excluded. Historical counts and chart values are transcribed from the original academic project documentation, not freshly computed from current public feeds.
